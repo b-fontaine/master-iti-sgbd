@@ -1,2 +1,114 @@
-# master-sis-sgbd
-Support de cours SGBD 
+# Master 1 : SGBD (Système de Gestion de Bases de Données), Programme
+
+## 📚Sunopsis 
+
+Ce module de 20 heures a pour objectif de rendre les étudiants ingénieurs autonomes dans la compréhension et la manipulation des systèmes de gestion de bases de données (SGBD). La démarche adoptée suit une progression volontairement graduelle : partir des fondements théoriques, explorer des outils accessibles pour illustrer les concepts, puis s’immerger dans des environnements professionnels avec SQL et NoSQL.
+
+La structure retenue repose sur **cinq séances de quatre heures**, chacune construite autour d’un axe d’apprentissage précis :
+
+* **Séance 1** pose les bases. Les étudiants découvrent l’histoire des SGBD, les notions essentielles (tables, index, clés) et expérimentent la modélisation via un outil simple (Notion) avant de manipuler une première base PostgreSQL.
+* **Séance 2** est consacrée aux requêtes SQL de base. L’accent est mis sur la pratique : écrire, exécuter et comprendre des requêtes simples, jusqu’à la mise en œuvre de jointures et d’agrégations.
+* **Séance 3** approfondit les usages. Les étudiants découvrent les contraintes d’intégrité, les transactions et les mécanismes d’optimisation (index, analyse de plan d’exécution). Une ouverture sur des concepts avancés (partitionnement, vues matérialisées) vient élargir leur horizon.
+* **Séance 4** introduit le monde du NoSQL. Après une présentation des différences fondamentales avec les bases relationnelles, un atelier pratique avec MongoDB leur permet de manipuler des documents JSON et d’expérimenter d’autres paradigmes de stockage.
+* **Séance 5** clôture le parcours par un projet de synthèse. Les étudiants mettent en pratique les acquis en modélisant un cas d’usage concret, combinant relationnel et non relationnel. Une démonstration avec Firebase vient compléter l’expérience et ouvre la réflexion sur les choix technologiques.
+
+L’ensemble du module vise à offrir une **vision équilibrée** : comprendre les principes théoriques, développer une capacité de manipulation pratique, et surtout acquérir une autonomie suffisante pour choisir et utiliser un SGBD en fonction des besoins d’un projet.
+
+
+## 📅 Séance 1 — Fondamentaux & découverte des bases (4h)
+
+🎯 Objectifs : comprendre ce qu’est un SGBD, pourquoi on en a besoin, et manipuler un premier modèle simple.
+
+* **1h30 – Théorie introductive**
+
+  * Histoire des bases de données (fichiers plats → SGBDR → NoSQL).
+  * Concepts clés : table, enregistrement, clé primaire, clé étrangère, index.
+  * Vulgarisation du B-Tree (métaphore dictionnaire/annuaire).
+* **1h – Atelier Notion**
+
+  * Création de tables (étudiants, cours, professeurs).
+  * Relations simples (1-n, n-n).
+* **1h30 – Introduction au SQL (PostgreSQL via Metabase)**
+
+  * Installation guidée (ou VM/Docker prêt).
+  * Création d’une base, d’une table simple, insertion de quelques données.
+
+
+## 📅 Séance 2 — SQL de base : requêtes et relations (4h)
+
+🎯 Objectifs : manipuler des données avec SQL, comprendre les jointures et les relations.
+
+* **1h – Rappel et setup rapide**
+
+  * Vérification environnement (PostgreSQL + Metabase).
+  * Présentation du schéma relationnel (ex : base école/université).
+* **2h – Atelier SQL**
+
+  * SELECT simple.
+  * WHERE, ORDER BY, LIMIT.
+  * JOINS (INNER, LEFT, RIGHT).
+  * GROUP BY, COUNT, AVG.
+* **1h – Mini-projet**
+
+  * Construire une petite base (étudiants/cours/notes).
+  * Écrire des requêtes pour répondre à des questions métier (ex : “Quel étudiant a la meilleure moyenne ?”).
+
+
+## 📅 Séance 3 — SQL avancé & bonnes pratiques (4h)
+
+🎯 Objectifs : comprendre la robustesse des SGBDR, introduire les concepts de performance.
+
+* **1h – Contraintes et intégrité**
+
+  * PRIMARY KEY, FOREIGN KEY, UNIQUE, NOT NULL.
+  * Transactions (BEGIN, COMMIT, ROLLBACK).
+* **2h – Optimisation & performances**
+
+  * Index (création, impact sur SELECT).
+  * EXPLAIN et analyse de plan.
+  * Cas concret : requête lente sans index → ajout d’index → gain visible.
+* **1h – Ouverture “avancé” (en démo)**
+
+  * Partitionnement / sharding (simple vulgarisation).
+  * Vues matérialisées.
+
+
+## 📅 Séance 4 — NoSQL par l’exemple (4h)
+
+🎯 Objectifs : comprendre les différences fondamentales avec SQL, découvrir un outil moderne.
+
+* **1h – Théorie NoSQL**
+
+  * Pourquoi NoSQL ? (scalabilité, schéma flexible, big data).
+  * BASE vs ACID.
+  * Types : clé/valeur, document, graphe, colonne.
+* **2h – Atelier MongoDB Atlas (ou Docker Mongo)**
+
+  * Création d’une base et d’une collection.
+  * Insertion de documents JSON.
+  * Requêtes simples (find, filtres, agrégation basique).
+* **1h – Comparaison avec SQL**
+
+  * Requêter la même donnée en SQL et NoSQL.
+  * Avantages / limites.
+
+
+## 📅 Séance 5 — Mise en pratique & ouverture (4h)
+
+🎯 Objectifs : consolider les acquis, montrer les cas d’usage et ouvrir sur des problématiques réelles.
+
+* **2h – Projet de synthèse**
+
+  * En groupes : modéliser une petite application (ex : gestion de bibliothèque, app de sport, robotique avec capteurs/mesures).
+  * Partie relationnelle : base PostgreSQL avec contraintes.
+  * Partie NoSQL : stockage JSON (ex : mesures de capteurs).
+  * Restitution : chaque groupe présente son modèle et 2-3 requêtes.
+* **1h – Firebase (démo)**
+
+  * Découverte rapide de Firestore.
+  * Sécurité (droits par utilisateur).
+* **1h – Conclusion et ouverture**
+
+  * Quand choisir SQL vs NoSQL.
+  * Importance des bases pour l’ingénieur (robotique → capteurs, électronique → logs, dev → apps).
+  * Bonnes pratiques pour l’autonomie (ressources, docs officielles).
