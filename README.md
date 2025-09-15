@@ -19,17 +19,16 @@ L’ensemble du module vise à offrir une **vision équilibrée** : comprendre l
 
 🎯 Objectifs : comprendre ce qu’est un SGBD, pourquoi on en a besoin, et manipuler un premier modèle simple.
 
-* **1h30 – Théorie introductive**
-
+* **1h30 – Théorie introductive** ([support](./cours/1_1_fondamentaux.md))
   * Histoire des bases de données (fichiers plats → SGBDR → NoSQL).
   * Concepts clés : table, enregistrement, clé primaire, clé étrangère, index.
   * Vulgarisation du B-Tree (métaphore dictionnaire/annuaire).
-* **1h – Atelier Notion**
-
+  
+* **1h – Atelier Notion** ([cheat sheet](./cours/1_2_cheat_sheet_notion.md))
   * Création de tables (étudiants, cours, professeurs).
   * Relations simples (1-n, n-n).
-* **1h30 – Introduction au SQL (PostgreSQL via Metabase)**
-
+  
+* **1h30 – Introduction au SQL (PostgreSQL via Metabase)** ([support](./cours/1_3_introduction_sql.md))
   * Installation guidée (ou VM/Docker prêt).
   * Création d’une base, d’une table simple, insertion de quelques données.
 
