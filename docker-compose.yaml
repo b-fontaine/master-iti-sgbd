@@ -1,0 +1,85 @@
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_sgbd
+    environment:
+      POSTGRES_DB: sgbd_cours
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=fr_FR.UTF-8 --lc-ctype=fr_FR.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker-configuration/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - sgbd_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Interface de visualisation Metabase
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase_sgbd
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: postgres
+      MB_DB_PASS: postgres123
+      MB_DB_HOST: postgres
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    networks:
+      - sgbd_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Interface d'administration pgAdmin (optionnel)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin_sgbd
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin4@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_SERVER_JSON_FILE: /pgadmin-config/servers.json
+      PGPASS_FILE: /pgadmin-config/pgpass
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker-configuration/pgadmin:/pgadmin-config:ro
+    networks:
+      - sgbd_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+
+
+volumes:
+  postgres_data:
+    driver: local
+  metabase_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  sgbd_network:
+    driver: bridge

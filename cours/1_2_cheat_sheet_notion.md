@@ -1,84 +1,243 @@
-# 3. Cheat Sheet — Bases de données dans Notion
+# Cheat Sheet — Bases de données Notion
 
-## Installation & première connexion
+**URL d'accès** : https://notion.so
 
-* **Web (le plus simple)** : va sur `notion.so`, crée un compte et démarre directement dans le navigateur.
-* **App desktop (recommandée)** :
+---
 
-    * **macOS** ou **Windows** → télécharge depuis la page officielle Notion Desktop, installe puis connecte-toi avec
-      ton compte.
-    * Guide pas à pas (Help Center) pour **Mac** et **Windows**.
-* **Mobile (optionnel)** : iOS/Android dispo sur l’App Store/Play Store (synchro automatique).
+## 🗃️ BASES DE DONNÉES - CONCEPTS ESSENTIELS
 
-## Vocabulaire minimal
+### Qu'est-ce qu'une base de données ?
+- **Collection de pages** organisées avec des propriétés communes
+- Chaque **ligne = une page** avec du contenu riche
+- **Propriétés = colonnes** (texte, nombre, date, sélection, etc.)
 
-* **Base de données** = une **collection de pages** (chaque ligne = une page avec propriétés).
-* **Propriété** = colonne (texte, nombre, date, select, multi-select, relation, rollup, formule, etc.).
-* **Vue** = table / board (Kanban) / calendrier / liste / galerie / **timeline** (Gantt).
+### Types de propriétés principales
+| Type | Usage | Exemple |
+|------|-------|---------|
+| **Titre** | Nom principal de l'élément | "Projet Alpha" |
+| **Texte** | Description courte | "Description du projet" |
+| **Nombre** | Valeurs numériques | Budget: 15000 |
+| **Sélection** | Choix unique | Statut: "En cours" |
+| **Multi-sélection** | Choix multiples | Tags: "Urgent", "Client" |
+| **Date** | Dates et heures | Échéance: 15/12/2024 |
+| **Personne** | Assignation | @Marie Dupont |
+| **Case à cocher** | Booléen | ☑️ Terminé |
+| **URL** | Liens web | https://example.com |
+| **Email** | Adresses email | contact@example.com |
+| **Téléphone** | Numéros | +33 1 23 45 67 89 |
 
-## Créer ta première base
+---
 
-1. Tape **/database – full page** (ou **/table** pour une table inline).
-2. Ajoute des **propriétés** :
+## 📊 VUES DE BASE DE DONNÉES
 
-    * *Title* (nom de l’item), *Select* (statut), *Person*, *Date*, *Number*, etc.
-3. Remplis quelques lignes : chaque ligne est *ouvrable* (une page avec ses propriétés).
+### Types de vues disponibles
+- **📋 Table** : Vue classique en lignes/colonnes
+- **📌 Tableau** : Kanban par statut/propriété
+- **📅 Calendrier** : Planning par dates
+- **📜 Liste** : Vue simplifiée verticale
+- **🖼️ Galerie** : Cartes visuelles avec images
+- **⏳ Chronologie** : Diagramme de Gantt
+- **📈 Graphique** : Visualisations de données
+- **🔍 Fil d'actualité** : Cartes empilées
 
-> Astuce : commence simple (3–6 propriétés). Tu spécialiseras ensuite.
+### Créer et gérer les vues
+```
++ Ajouter une vue → Choisir le type → Nommer
+```
+- Chaque vue peut avoir ses **filtres**, **tris** et **groupes**
+- Les vues sont **indépendantes** (modifier une vue n'affecte pas les autres)
 
-**Importer** rapidement un CSV (données de démarrage) : depuis une base, *… → Merge with CSV* (ou *Import* dans la barre
-latérale). *(Interface sujette à évoluer)*
+---
 
-## Vues & “pseudo-requêtes”
+## 🔍 FILTRES, TRIS ET GROUPES
 
-* **Changer de vue** : *Add a view* → choisis **Table / Board / Calendar / Timeline / List / Gallery**.
-* **Filtrer / Trier / Grouper** (équivalents des clauses WHERE/ORDER BY/GROUP BY) via l’icône **filtres/tri** de la
-  base.
-* **Linked database** : recrée une **vue filtrée** de la *même* base dans une autre page (dashboard). Les filtrages
-  d’une vue liée **n’altèrent pas** la base source.
-* **Timeline** (planification) : timeline + “table à gauche”, bouton **Today**, etc.
+### Filtres (équivalent WHERE en SQL)
+- **Texte** : contient, ne contient pas, est vide
+- **Nombre** : =, ≠, >, <, ≥, ≤
+- **Date** : avant, après, cette semaine, ce mois
+- **Sélection** : est, n'est pas, est vide
+- **Personne** : est, contient, est vide
+- **Case à cocher** : cochée, non cochée
 
-## Relations & Rollups (les “jointures” de Notion)
+### Tris (équivalent ORDER BY)
+- **Croissant** (A→Z, 1→9, ancien→récent)
+- **Décroissant** (Z→A, 9→1, récent→ancien)
+- **Tris multiples** possibles (priorité par ordre)
 
-* **Relation** : relie des items entre **deux bases** (ex. *Tâches → Projets*). La relation est **bidirectionnelle**.
-* **Rollup** : remonte un ou plusieurs **champs** de la base liée (ex. *Nb de tâches par projet*, *Somme des points*).
-  **Comment faire (recette express)**
+### Groupes (équivalent GROUP BY)
+- Regrouper par **Sélection**, **Multi-sélection**, **Personne**, **Date**
+- Affichage en **sections** avec compteurs
 
-1. Dans *Tâches*, ajoute une propriété **Relation** vers *Projets*.
-2. Dans *Projets*, ajoute un **Rollup** : source = relation *Tâches*, propriété = *Status*, fonction = *Count* (ou
-   *Percent complete*, *Sum*, etc.).
+---
 
-## Formules utiles
+## 🔗 RELATIONS ET ROLLUPS
 
-* La propriété **Formula** permet calculs & transformations (dates, textes, booléens, maths…).
-* Référentiel des **fonctions** & **syntaxes** (Help Center) : https://www.notion.com/help/formulas
+### Relations (jointures entre bases)
+1. **Créer une relation** : Propriété → Relation → Choisir la base cible
+2. **Bidirectionnelle** : apparaît automatiquement dans les deux bases
+3. **Plusieurs éléments** possibles par relation
 
-## Mapping **SQL ↔ Notion**
+### Rollups (agrégations)
+1. **Prérequis** : avoir une relation existante
+2. **Configuration** :
+   - Source : propriété relation
+   - Propriété : champ à agréger
+   - Fonction : Count, Sum, Average, Min, Max, etc.
 
-| Concept SQL           | Équivalent Notion     | Remarques                                  |
-|-----------------------|-----------------------|--------------------------------------------|
-| Table                 | Base de données       | Pas de schéma strict ; types souples.      |
-| Ligne                 | Page (item)           | Ouvrable, peut contenir du contenu riche.  |
-| Colonne               | Propriété             | Types variés (Select, Date, Number, etc.). |
-| PK                    | Titre (implicite)     | **Aucune contrainte d’unicité** garantie.  |
-| FK                    | Relation              | Lien bidirectionnel configurable.          |
-| JOIN                  | Relation + Rollup     | “Jointures” matérialisées par UI.          |
-| WHERE / ORDER / GROUP | Filtres / Tri / Group | Par vue (sauvegardables).                  |
-| Vue matérialisée      | Linked DB             | Vue filtrée d’une source unique.           |
+**Exemple pratique** :
+```
+Base "Projets" ← Relation → Base "Tâches"
+Rollup dans Projets : 
+- Source: Tâches (relation)
+- Propriété: Statut
+- Fonction: Percent complete
+```
 
-> **Limites à connaître** : pas de transactions ACID, pas de contraintes fortes (UNIQUE/NOT NULL), pas d’index au sens
-> SGBD ; tout est piloté par l’UI et les propriétés.
+---
 
-## Bonnes pratiques rapides
+## 📐 FORMULES UTILES
 
-* **Nomme tes propriétés** sans ambiguïté (ex. `Échéance` plutôt que `Date`).
-* **Centralise** les données sources (1 base maîtresse), puis **multiplie les “linked DB”** pour les vues ciblées (
-  tableaux de bord).
-* **Commence simple**, puis ajoute Relations/Rollups **quand un besoin clair** apparaît (sinon complexité inutile).
-* **Documente** chaque base (section “About” en haut de page) : finalité, propriétaire, règles de saisie.
+### Syntaxe de base
+```javascript
+// Texte
+prop("Nom") + " - " + prop("Statut")
 
-## Raccourcis de survie
+// Nombres
+prop("Prix") * 1.20  // TVA 20%
 
-* **/database**, **/table**, **/board**, **/calendar**, **/timeline** pour créer vite.
-* **Cmd/Ctrl + P** : recherche universelle.
-* **Cmd/Ctrl + Shift + L** : mode sombre 🌙.
+// Dates
+dateBetween(prop("Fin"), prop("Début"), "days")
+
+// Conditions
+if(prop("Urgent"), "🔥", "📝")
+```
+
+### Fonctions courantes
+| Fonction | Usage | Exemple |
+|----------|-------|---------|
+| `prop("Nom")` | Référencer une propriété | `prop("Prix")` |
+| `if(test, vrai, faux)` | Condition | `if(prop("Fini"), "✅", "⏳")` |
+| `concat(a, b, c)` | Concaténer | `concat("Projet ", prop("Nom"))` |
+| `format(date)` | Formater date | `format(prop("Échéance"))` |
+| `length(texte)` | Longueur | `length(prop("Description"))` |
+| `contains(texte, recherche)` | Contient | `contains(prop("Tags"), "Urgent")` |
+
+---
+
+## 🎨 MISES EN PAGE PERSONNALISÉES
+
+### Structure des pages
+- **Titre** : toujours visible, jusqu'à 4 propriétés épinglées
+- **Page principale** : contenu et modules de propriétés
+- **Menu d'informations** : panneau latéral droit
+
+### Personnalisation
+1. **Ouvrir une page** de base de données
+2. **Cliquer sur "Personnaliser la mise en page"**
+3. **Épingler des propriétés** au titre (max 4)
+4. **Ajouter des modules** sur la page principale
+5. **Organiser le menu** d'informations
+6. **Appliquer à toutes les pages**
+
+---
+
+## 🔧 MODÈLES DE PAGES
+
+### Créer un modèle
+1. Dans la base de données : **⚙️ → Modèles**
+2. **+ Nouveau modèle**
+3. **Configurer** la structure type
+4. **Définir les propriétés** par défaut
+
+### Utiliser un modèle
+- **Nouvelle page** → Choisir le modèle
+- **Bouton de modèle** : dupliquer la structure
+
+---
+
+## 📋 BASES DE DONNÉES LIÉES
+
+### Principe
+- **Même source**, **vue différente** ailleurs
+- Filtres et tris **indépendants**
+- Modifications **synchronisées**
+
+### Créer une base liée
+```
+/linked → Choisir la base source → Configurer les filtres
+```
+
+**Cas d'usage** : tableaux de bord, vues spécialisées par équipe
+
+---
+
+## ⚡ RACCOURCIS CLAVIER ESSENTIELS
+
+### Navigation et recherche
+| Raccourci | Action |
+|-----------|--------|
+| `Cmd/Ctrl + P` | Recherche rapide |
+| `Cmd/Ctrl + K` | Aller à une page |
+| `Cmd/Ctrl + [` | Page précédente |
+| `Cmd/Ctrl + ]` | Page suivante |
+| `Cmd/Ctrl + F` | Rechercher dans la page |
+
+### Création rapide
+| Raccourci | Action |
+|-----------|--------|
+| `/database` | Nouvelle base de données |
+| `/table` | Nouvelle table |
+| `/board` | Nouveau tableau Kanban |
+| `/calendar` | Nouveau calendrier |
+| `/timeline` | Nouvelle chronologie |
+
+### Édition et mise en forme
+| Raccourci | Action |
+|-----------|--------|
+| `Cmd/Ctrl + B` | **Gras** |
+| `Cmd/Ctrl + I` | *Italique* |
+| `Cmd/Ctrl + U` | Souligné |
+| `Cmd/Ctrl + K` | Ajouter un lien |
+| `Cmd/Ctrl + E` | Code inline |
+
+### Manipulation de blocs
+| Raccourci | Action |
+|-----------|--------|
+| `Cmd/Ctrl + D` | Dupliquer le bloc |
+| `Cmd/Ctrl + /` | Menu d'actions |
+| `Échap` | Sélectionner le bloc |
+| `Entrée` | Éditer le bloc |
+| `Tab` | Indenter |
+| `Maj + Tab` | Désindenter |
+
+### Interface et affichage
+| Raccourci | Action |
+|-----------|--------|
+| `Cmd/Ctrl + Maj + L` | Mode sombre/clair |
+| `Cmd/Ctrl + \` | Masquer/afficher sidebar |
+| `Cmd/Ctrl + +` | Zoomer |
+| `Cmd/Ctrl + -` | Dézoomer |
+| `Cmd/Ctrl + 0` | Zoom par défaut |
+
+---
+
+## 💡 BONNES PRATIQUES
+
+### Organisation
+- **Nommer clairement** les propriétés (ex: "Date d'échéance" vs "Date")
+- **Commencer simple** : 3-5 propriétés maximum au début
+- **Documenter** chaque base (description en haut de page)
+
+### Performance
+- **Limiter les relations** complexes
+- **Éviter trop de rollups** sur de grandes bases
+- **Utiliser les vues filtrées** plutôt que de grandes tables
+
+### Collaboration
+- **Définir des conventions** de nommage
+- **Former les utilisateurs** aux bases essentielles
+- **Centraliser les données** sources, multiplier les vues
+
+---
+
+*Cheat sheet basé sur la documentation officielle Notion - Version 2025*
