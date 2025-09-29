@@ -3,16 +3,24 @@
 
 ```mermaid
 timeline
-  title Histoire des bases de données (1950s → aujourd’hui)
-  1956 : IBM 350 (RAMAC) — stockage à accès direct
-  1960s : Modèles hiérarchiques (IMS) et réseau (CODASYL)
-  1970 : Codd formalise le modèle relationnel
-  1974–1977 : System R (IBM) & Ingres (Berkeley) — 1ères implémentations
-  1986–1987 : SQL devient une norme ANSI/ISO
-  1990s : Web, open-source (PostgreSQL/MySQL), OLTP/OLAP
-  2006–2007 : Bigtable (Google) & Dynamo (Amazon) — NoSQL à grande échelle
-  2009 : Le terme « NoSQL » popularisé (meetup SF)
-  2010s–2020s : Cloud/DBaaS, NewSQL, bases distribuées
+    title Histoire des bases de données (1950s → aujourd’hui)
+    1956 : IBM 350 (RAMAC) — stockage à accès direct
+    1960–1969 : Systèmes hiérarchiques (IMS) et réseau (CODASYL), SABRE (réservations aériennes)
+    1970 : Codd formalise le modèle relationnel
+    1974–1977 : System R (IBM) & Ingres (Berkeley) — 1ères implémentations
+    1976 : Modèle entité–association (Peter Chen)
+    1979–1983 : Oracle v2, dBase — premiers SGBD commerciaux grand public/pro
+    1986–1987 : SQL devient une norme ANSI/ISO
+    1980s : OLTP et transactions ACID - premiers entrepôts de données (Inmon/Kimball)
+    1985–1995 : Tableurs (Lotus 1‑2‑3, Excel) → self‑service data - ODBC - MS Access, FileMaker
+    1990s : Web, open‑source (PostgreSQL/MySQL), OLAP et cubes décisionnels
+    2000–2008 : SQLite (embarqué), Hadoop - colonnes/MPP (Vertica, Greenplum)
+    2006–2007 : Bigtable (Google) & Dynamo (Amazon) — NoSQL à grande échelle
+    2009 : « NoSQL » popularisé (communauté non‑relationnelle)
+    2010s : Cloud/DBaaS, entrepôts cloud (BigQuery/Redshift/Snowflake), Spark
+    2015–2020 : Streaming (Kafka), NewSQL/Distributed SQL (Spanner, CockroachDB, Yugabyte), HTAP
+    2019–2023 : Lakehouse (Delta/Iceberg/Hudi), vector search & bases vectorielles
+    2020s : Bases autonomes, serverless, data products & gouvernance
 ```
 
 
@@ -29,7 +37,7 @@ quickbase.com
 . Un exemple marquant de cette époque est le système SABRE d’IBM pour les réservations d’avion (American Airlines), qui connut un grand succès commercial
 quickbase.com
 
-![IBM HDD](img/ibm_disk_drive.png)
+![IBM 350 (RAMAC)](./img/ibm_disk_drive.png)
 
 * **Années 1970 – Naissance du relationnel :** En 1970, Edgar F. Codd publie une thèse révolutionnaire qui jette les bases des bases de données relationnelles
 data-bird.co
@@ -50,7 +58,7 @@ quickbase.com
 . En fin de décennie, on expérimente aussi des bases orientées objet (intégrant les concepts de programmation objet dans le stockage)
 data-bird.co
 
-![AS/400](img/as_400.png)
+![AS/400](./img/as_400.png)
 
 * **Années 1990 – Démocratisation & web :** L’essor d’Internet et des applications client-serveur fait exploser les besoins en bases de données en réseau
 quickbase.com

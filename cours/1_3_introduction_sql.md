@@ -31,8 +31,8 @@ Ces commandes doivent afficher les versions installées de Docker et Docker Comp
 **Étape 3 – Récupération du projet :**
 Cloner le repository contenant la configuration Docker :
 ```bash
-git clone https://github.com/b-fontaine/master-sis-sgbd
-cd master-sis-sgbd
+git clone https://github.com/b-fontaine/master-iti-sgbd
+cd master-iti-sgbd
 ```
 
 **Étape 4 – Lancement de l'environnement :**
