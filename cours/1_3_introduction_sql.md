@@ -18,7 +18,7 @@ Une fois les concepts assimilés, on passe à un **SGBD réel (PostgreSQL)** pou
 
 - **Sous macOS :** Télécharger Docker Desktop pour Mac (disponible pour les puces Intel et Apple Silicon). Glisser l'application dans le dossier Applications et la lancer. Accepter les permissions nécessaires lorsque demandées.
 
-- **Sous Linux :** Installer Docker Engine via le gestionnaire de paquets de votre distribution. Par exemple, sur Ubuntu/Debian : `sudo apt-get update && sudo apt-get install docker.io docker-compose`. Ajouter votre utilisateur au groupe docker : `sudo usermod -aG docker $USER` puis redémarrer la session.
+- **Sous Linux :** Installer Docker Engine via le gestionnaire de paquets de votre distribution. Suis le tutoriel sur [dockerdocs](https://docs.docker.com/desktop/setup/install/linux/)
 
 **Étape 2 – Vérification de l'installation :**
 Ouvrir un terminal (ou PowerShell sous Windows) et exécuter :
