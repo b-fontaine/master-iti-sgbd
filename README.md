@@ -37,16 +37,19 @@ L’ensemble du module vise à offrir une **vision équilibrée** : comprendre l
 
 🎯 Objectifs : manipuler des données avec SQL, comprendre les jointures et les relations.
 
-* **1h – Rappel et setup rapide**
+* **1h – Rappel et setup rapide** ([support](./cours/2_1_rappel_episodes_precedents.md))
 
-  * Vérification environnement (PostgreSQL + Metabase).
-  * Présentation du schéma relationnel (ex : base école/université).
-* **2h – Atelier SQL**
+  * Vérification environnement
+  * Présentation du schéma relationnel de la base CRM ([documentation](./cours/2_2_shema_base_crm.md))
+
+* **2h – Atelier SQL** ([exercices](./cours/2_3_exercices_crm.md))
 
   * SELECT simple.
   * WHERE, ORDER BY, LIMIT.
   * JOINS (INNER, LEFT, RIGHT).
   * GROUP BY, COUNT, AVG.
+  * **Base de données utilisée** : `exemple_crm` (20 clients, 44 contacts, 50 meetings, 100 produits, 40 commandes, 15 factures)
+  
 * **1h – Mini-projet**
 
   * Construire une petite base (étudiants/cours/notes).
@@ -61,11 +64,13 @@ L’ensemble du module vise à offrir une **vision équilibrée** : comprendre l
 
   * PRIMARY KEY, FOREIGN KEY, UNIQUE, NOT NULL.
   * Transactions (BEGIN, COMMIT, ROLLBACK).
+  
 * **2h – Optimisation & performances**
 
   * Index (création, impact sur SELECT).
   * EXPLAIN et analyse de plan.
   * Cas concret : requête lente sans index → ajout d’index → gain visible.
+  
 * **1h – Ouverture “avancé” (en démo)**
 
   * Partitionnement / sharding (simple vulgarisation).
@@ -81,11 +86,13 @@ L’ensemble du module vise à offrir une **vision équilibrée** : comprendre l
   * Pourquoi NoSQL ? (scalabilité, schéma flexible, big data).
   * BASE vs ACID.
   * Types : clé/valeur, document, graphe, colonne.
+  
 * **2h – Atelier MongoDB Atlas (ou Docker Mongo)**
 
   * Création d’une base et d’une collection.
   * Insertion de documents JSON.
   * Requêtes simples (find, filtres, agrégation basique).
+  
 * **1h – Comparaison avec SQL**
 
   * Requêter la même donnée en SQL et NoSQL.
@@ -102,10 +109,12 @@ L’ensemble du module vise à offrir une **vision équilibrée** : comprendre l
   * Partie relationnelle : base PostgreSQL avec contraintes.
   * Partie NoSQL : stockage JSON (ex : mesures de capteurs).
   * Restitution : chaque groupe présente son modèle et 2-3 requêtes.
+  
 * **1h – Firebase (démo)**
 
   * Découverte rapide de Firestore.
   * Sécurité (droits par utilisateur).
+  
 * **1h – Conclusion et ouverture**
 
   * Quand choisir SQL vs NoSQL.
