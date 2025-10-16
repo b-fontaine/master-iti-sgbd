@@ -577,3 +577,753 @@ SELECT COUNT(*) as nombre_meetings FROM meetings;
 SELECT COUNT(*) as nombre_produits FROM produits;
 SELECT COUNT(*) as nombre_commandes FROM commandes;
 SELECT COUNT(*) as nombre_factures FROM factures;
+
+-- ============================================================================
+-- CRÉATION DE LA BASE DE DONNÉES PRODUCTION ÉLECTRONIQUE
+-- ============================================================================
+
+CREATE DATABASE exemple_production_electronique;
+
+\c exemple_production_electronique;
+
+-- ============================================================================
+-- CRÉATION DES TABLES
+-- ============================================================================
+
+-- Table cartes_electroniques (8 types de cartes différentes)
+CREATE TABLE cartes_electroniques (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR(50) UNIQUE NOT NULL,
+    nom VARCHAR(200) NOT NULL,
+    description TEXT,
+    version VARCHAR(20) NOT NULL,
+    type_carte VARCHAR(50) NOT NULL CHECK (type_carte IN ('controle', 'alimentation', 'communication', 'interface', 'capteur', 'processeur', 'memoire', 'affichage')),
+    temps_assemblage_minutes INT NOT NULL CHECK (temps_assemblage_minutes > 0),
+    prix_unitaire DECIMAL(10,2) NOT NULL CHECK (prix_unitaire >= 0),
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table composants (composants électroniques)
+CREATE TABLE composants (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR(50) UNIQUE NOT NULL,
+    nom VARCHAR(200) NOT NULL,
+    description TEXT,
+    type_composant VARCHAR(50) NOT NULL CHECK (type_composant IN ('resistance', 'condensateur', 'transistor', 'circuit_integre', 'connecteur', 'led', 'diode', 'inductance', 'cristal', 'relais')),
+    fabricant VARCHAR(100),
+    stock_actuel INT DEFAULT 0 CHECK (stock_actuel >= 0),
+    stock_minimum INT DEFAULT 0 CHECK (stock_minimum >= 0),
+    prix_unitaire DECIMAL(10,4) NOT NULL CHECK (prix_unitaire >= 0),
+    delai_approvisionnement_jours INT DEFAULT 7 CHECK (delai_approvisionnement_jours >= 0),
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table nomenclature (BOM - Bill of Materials)
+CREATE TABLE nomenclature (
+    id SERIAL PRIMARY KEY,
+    carte_id INT NOT NULL,
+    composant_id INT NOT NULL,
+    quantite INT NOT NULL CHECK (quantite > 0),
+    reference_designator VARCHAR(50),
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (carte_id) REFERENCES cartes_electroniques(id) ON DELETE CASCADE,
+    FOREIGN KEY (composant_id) REFERENCES composants(id) ON DELETE RESTRICT,
+    UNIQUE(carte_id, composant_id, reference_designator)
+);
+
+-- Table operations_fabrication (opérations de fabrication)
+CREATE TABLE operations_fabrication (
+    id SERIAL PRIMARY KEY,
+    code_operation VARCHAR(50) UNIQUE NOT NULL,
+    nom VARCHAR(200) NOT NULL,
+    description TEXT,
+    type_operation VARCHAR(50) NOT NULL CHECK (type_operation IN ('automatique', 'manuelle')),
+    categorie VARCHAR(50) NOT NULL CHECK (categorie IN ('assemblage_cms', 'assemblage_traversant', 'soudure_vague', 'soudure_refusion', 'test_electrique', 'test_fonctionnel', 'inspection_visuelle', 'inspection_aoi', 'decoupe', 'nettoyage', 'conditionnement', 'manutention')),
+    duree_standard_minutes DECIMAL(10,2) NOT NULL CHECK (duree_standard_minutes > 0),
+    cout_horaire DECIMAL(10,2) DEFAULT 0 CHECK (cout_horaire >= 0),
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table gammes_fabrication (séquence d'opérations pour chaque carte)
+CREATE TABLE gammes_fabrication (
+    id SERIAL PRIMARY KEY,
+    carte_id INT NOT NULL,
+    operation_id INT NOT NULL,
+    ordre_operation INT NOT NULL CHECK (ordre_operation > 0),
+    duree_minutes DECIMAL(10,2) NOT NULL CHECK (duree_minutes > 0),
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (carte_id) REFERENCES cartes_electroniques(id) ON DELETE CASCADE,
+    FOREIGN KEY (operation_id) REFERENCES operations_fabrication(id) ON DELETE RESTRICT,
+    UNIQUE(carte_id, ordre_operation)
+);
+
+-- Table ordres_fabrication (ordres de production)
+CREATE TABLE ordres_fabrication (
+    id SERIAL PRIMARY KEY,
+    numero_of VARCHAR(50) UNIQUE NOT NULL,
+    carte_id INT NOT NULL,
+    quantite_prevue INT NOT NULL CHECK (quantite_prevue > 0),
+    quantite_produite INT DEFAULT 0 CHECK (quantite_produite >= 0),
+    quantite_conforme INT DEFAULT 0 CHECK (quantite_conforme >= 0),
+    quantite_rebut INT DEFAULT 0 CHECK (quantite_rebut >= 0),
+    date_lancement DATE NOT NULL,
+    date_fin_prevue DATE NOT NULL,
+    date_fin_reelle DATE,
+    statut VARCHAR(20) DEFAULT 'planifie' CHECK (statut IN ('planifie', 'en_cours', 'termine', 'suspendu', 'annule')),
+    priorite VARCHAR(20) DEFAULT 'normale' CHECK (priorite IN ('basse', 'normale', 'haute', 'urgente')),
+    commentaire TEXT,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (carte_id) REFERENCES cartes_electroniques(id) ON DELETE RESTRICT
+);
+
+-- Table suivi_production (suivi détaillé de la production par opération)
+CREATE TABLE suivi_production (
+    id SERIAL PRIMARY KEY,
+    ordre_fabrication_id INT NOT NULL,
+    operation_id INT NOT NULL,
+    date_debut TIMESTAMP NOT NULL,
+    date_fin TIMESTAMP,
+    quantite_traitee INT DEFAULT 0 CHECK (quantite_traitee >= 0),
+    quantite_conforme INT DEFAULT 0 CHECK (quantite_conforme >= 0),
+    quantite_defaut INT DEFAULT 0 CHECK (quantite_defaut >= 0),
+    operateur VARCHAR(100),
+    machine VARCHAR(100),
+    statut VARCHAR(20) DEFAULT 'en_cours' CHECK (statut IN ('en_cours', 'termine', 'suspendu')),
+    commentaire TEXT,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ordre_fabrication_id) REFERENCES ordres_fabrication(id) ON DELETE CASCADE,
+    FOREIGN KEY (operation_id) REFERENCES operations_fabrication(id) ON DELETE RESTRICT
+);
+
+-- Table defauts_qualite (défauts détectés)
+CREATE TABLE defauts_qualite (
+    id SERIAL PRIMARY KEY,
+    suivi_production_id INT NOT NULL,
+    type_defaut VARCHAR(100) NOT NULL,
+    description TEXT,
+    quantite INT DEFAULT 1 CHECK (quantite > 0),
+    gravite VARCHAR(20) DEFAULT 'moyenne' CHECK (gravite IN ('mineure', 'moyenne', 'majeure', 'critique')),
+    action_corrective TEXT,
+    date_detection TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (suivi_production_id) REFERENCES suivi_production(id) ON DELETE CASCADE
+);
+
+-- ============================================================================
+-- CRÉATION DES INDEX POUR OPTIMISATION
+-- ============================================================================
+
+CREATE INDEX idx_cartes_reference ON cartes_electroniques(reference);
+CREATE INDEX idx_cartes_type ON cartes_electroniques(type_carte);
+CREATE INDEX idx_composants_reference ON composants(reference);
+CREATE INDEX idx_composants_type ON composants(type_composant);
+CREATE INDEX idx_composants_stock ON composants(stock_actuel);
+CREATE INDEX idx_nomenclature_carte_id ON nomenclature(carte_id);
+CREATE INDEX idx_nomenclature_composant_id ON nomenclature(composant_id);
+CREATE INDEX idx_operations_type ON operations_fabrication(type_operation);
+CREATE INDEX idx_operations_categorie ON operations_fabrication(categorie);
+CREATE INDEX idx_gammes_carte_id ON gammes_fabrication(carte_id);
+CREATE INDEX idx_gammes_operation_id ON gammes_fabrication(operation_id);
+CREATE INDEX idx_ordres_numero ON ordres_fabrication(numero_of);
+CREATE INDEX idx_ordres_carte_id ON ordres_fabrication(carte_id);
+CREATE INDEX idx_ordres_statut ON ordres_fabrication(statut);
+CREATE INDEX idx_ordres_date_lancement ON ordres_fabrication(date_lancement);
+CREATE INDEX idx_suivi_ordre_id ON suivi_production(ordre_fabrication_id);
+CREATE INDEX idx_suivi_operation_id ON suivi_production(operation_id);
+CREATE INDEX idx_suivi_date_debut ON suivi_production(date_debut);
+CREATE INDEX idx_defauts_suivi_id ON defauts_qualite(suivi_production_id);
+CREATE INDEX idx_defauts_type ON defauts_qualite(type_defaut);
+
+-- ============================================================================
+-- INSERTION DES DONNÉES D'EXEMPLE
+-- ============================================================================
+
+-- Insertion des 8 cartes électroniques
+INSERT INTO cartes_electroniques (reference, nom, description, version, type_carte, temps_assemblage_minutes, prix_unitaire) VALUES
+    ('PCB-CTRL-001', 'Carte Contrôleur Principal', 'Carte de contrôle principale avec microcontrôleur ARM Cortex-M4', 'v2.3', 'controle', 45, 125.50),
+    ('PCB-PWR-002', 'Carte Alimentation 24V', 'Module d''alimentation régulée 24V/5A avec protection', 'v1.5', 'alimentation', 30, 85.00),
+    ('PCB-COM-003', 'Carte Communication RS485/Ethernet', 'Interface de communication industrielle multi-protocole', 'v3.1', 'communication', 40, 145.75),
+    ('PCB-HMI-004', 'Carte Interface Utilisateur', 'Interface tactile avec écran LCD 7 pouces', 'v2.0', 'interface', 50, 195.00),
+    ('PCB-SENS-005', 'Carte Acquisition Capteurs', 'Module d''acquisition 16 voies analogiques/numériques', 'v1.8', 'capteur', 35, 98.50),
+    ('PCB-CPU-006', 'Carte Processeur Industriel', 'Carte processeur haute performance pour traitement temps réel', 'v4.2', 'processeur', 55, 285.00),
+    ('PCB-MEM-007', 'Carte Extension Mémoire', 'Module mémoire flash 256GB avec interface SATA', 'v1.2', 'memoire', 25, 165.00),
+    ('PCB-DISP-008', 'Carte Affichage LED Matrix', 'Contrôleur d''affichage LED matriciel 64x32', 'v2.5', 'affichage', 38, 112.00);
+
+-- Insertion des composants électroniques (50 composants variés)
+INSERT INTO composants (reference, nom, description, type_composant, fabricant, stock_actuel, stock_minimum, prix_unitaire, delai_approvisionnement_jours) VALUES
+    -- Résistances (8 composants)
+    ('RES-0805-10K', 'Résistance 10kΩ 0805', 'Résistance CMS 10kΩ ±1% 0.125W', 'resistance', 'Yageo', 15000, 5000, 0.0025, 7),
+    ('RES-0805-1K', 'Résistance 1kΩ 0805', 'Résistance CMS 1kΩ ±1% 0.125W', 'resistance', 'Yageo', 12000, 5000, 0.0025, 7),
+    ('RES-0805-100R', 'Résistance 100Ω 0805', 'Résistance CMS 100Ω ±1% 0.125W', 'resistance', 'Yageo', 10000, 4000, 0.0025, 7),
+    ('RES-1206-47K', 'Résistance 47kΩ 1206', 'Résistance CMS 47kΩ ±5% 0.25W', 'resistance', 'Vishay', 8000, 3000, 0.0035, 7),
+    ('RES-0603-220R', 'Résistance 220Ω 0603', 'Résistance CMS 220Ω ±1% 0.1W', 'resistance', 'Panasonic', 9000, 3500, 0.0020, 7),
+    ('RES-2512-0R1', 'Résistance 0.1Ω 2512', 'Résistance de puissance 0.1Ω 1W', 'resistance', 'Vishay', 2000, 500, 0.1250, 14),
+    ('RES-0805-4K7', 'Résistance 4.7kΩ 0805', 'Résistance CMS 4.7kΩ ±1% 0.125W', 'resistance', 'Yageo', 11000, 4000, 0.0025, 7),
+    ('RES-1206-10R', 'Résistance 10Ω 1206', 'Résistance CMS 10Ω ±5% 0.25W', 'resistance', 'KOA', 7000, 2500, 0.0040, 7),
+
+    -- Condensateurs (10 composants)
+    ('CAP-0805-100N', 'Condensateur 100nF 0805', 'Condensateur céramique X7R 50V', 'condensateur', 'Murata', 18000, 6000, 0.0150, 7),
+    ('CAP-0805-10U', 'Condensateur 10µF 0805', 'Condensateur céramique X5R 16V', 'condensateur', 'Samsung', 8000, 3000, 0.0450, 7),
+    ('CAP-1206-22U', 'Condensateur 22µF 1206', 'Condensateur céramique X5R 25V', 'condensateur', 'TDK', 6000, 2000, 0.0850, 7),
+    ('CAP-ELEC-470U', 'Condensateur électrolytique 470µF', 'Condensateur électrolytique 35V radial', 'condensateur', 'Nichicon', 3000, 1000, 0.2500, 14),
+    ('CAP-0603-1U', 'Condensateur 1µF 0603', 'Condensateur céramique X5R 10V', 'condensateur', 'Murata', 12000, 4000, 0.0250, 7),
+    ('CAP-1210-47U', 'Condensateur 47µF 1210', 'Condensateur céramique X5R 16V', 'condensateur', 'Samsung', 4000, 1500, 0.1500, 7),
+    ('CAP-0805-1N', 'Condensateur 1nF 0805', 'Condensateur céramique C0G 50V', 'condensateur', 'Kemet', 10000, 3500, 0.0180, 7),
+    ('CAP-TANT-100U', 'Condensateur tantale 100µF', 'Condensateur tantale 16V CMS', 'condensateur', 'AVX', 2500, 800, 0.4500, 14),
+    ('CAP-0805-4U7', 'Condensateur 4.7µF 0805', 'Condensateur céramique X5R 10V', 'condensateur', 'TDK', 9000, 3000, 0.0350, 7),
+    ('CAP-1206-100U', 'Condensateur 100µF 1206', 'Condensateur céramique X5R 6.3V', 'condensateur', 'Murata', 5000, 1800, 0.1200, 7),
+
+    -- Circuits intégrés (12 composants)
+    ('IC-MCU-STM32F4', 'Microcontrôleur STM32F407', 'MCU ARM Cortex-M4 168MHz LQFP100', 'circuit_integre', 'STMicroelectronics', 500, 200, 8.5000, 21),
+    ('IC-REG-LM7805', 'Régulateur 7805', 'Régulateur linéaire 5V 1A TO-220', 'circuit_integre', 'Texas Instruments', 1200, 400, 0.4500, 14),
+    ('IC-REG-LM317', 'Régulateur LM317', 'Régulateur ajustable 1.2-37V TO-220', 'circuit_integre', 'Texas Instruments', 800, 300, 0.5500, 14),
+    ('IC-OPAMP-LM358', 'Ampli-op LM358', 'Amplificateur opérationnel double DIP8', 'circuit_integre', 'Texas Instruments', 2000, 600, 0.2800, 14),
+    ('IC-RS485-MAX485', 'Transceiver RS485 MAX485', 'Circuit interface RS485 DIP8', 'circuit_integre', 'Maxim', 1500, 500, 1.2500, 14),
+    ('IC-ETH-W5500', 'Contrôleur Ethernet W5500', 'Circuit Ethernet TCP/IP LQFP48', 'circuit_integre', 'WIZnet', 300, 100, 4.5000, 21),
+    ('IC-MEM-24C256', 'EEPROM 24C256', 'Mémoire EEPROM I2C 256Kbit DIP8', 'circuit_integre', 'Microchip', 1800, 600, 0.6500, 14),
+    ('IC-ADC-ADS1115', 'Convertisseur ADC ADS1115', 'ADC 16-bit 4 canaux I2C MSOP10', 'circuit_integre', 'Texas Instruments', 600, 200, 3.2500, 14),
+    ('IC-DRIVER-L293D', 'Driver moteur L293D', 'Driver pont H double DIP16', 'circuit_integre', 'STMicroelectronics', 900, 300, 1.8500, 14),
+    ('IC-RTC-DS3231', 'Horloge temps réel DS3231', 'RTC haute précision I2C SO16', 'circuit_integre', 'Maxim', 400, 150, 2.7500, 14),
+    ('IC-FLASH-W25Q128', 'Mémoire Flash W25Q128', 'Flash SPI 128Mbit SOIC8', 'circuit_integre', 'Winbond', 800, 250, 1.9500, 14),
+    ('IC-DCDC-LM2596', 'Convertisseur DC-DC LM2596', 'Buck converter 3A TO-263', 'circuit_integre', 'Texas Instruments', 1000, 350, 1.4500, 14),
+
+    -- Transistors (5 composants)
+    ('TRANS-2N2222', 'Transistor 2N2222', 'Transistor NPN 40V 800mA TO-92', 'transistor', 'ON Semiconductor', 5000, 1500, 0.0850, 7),
+    ('TRANS-BC547', 'Transistor BC547', 'Transistor NPN 45V 100mA TO-92', 'transistor', 'Fairchild', 6000, 2000, 0.0450, 7),
+    ('TRANS-IRF540', 'MOSFET IRF540', 'MOSFET N-channel 100V 28A TO-220', 'transistor', 'Infineon', 1200, 400, 0.8500, 14),
+    ('TRANS-BSS138', 'MOSFET BSS138', 'MOSFET N-channel 50V 220mA SOT-23', 'transistor', 'NXP', 3000, 1000, 0.1250, 7),
+    ('TRANS-2N3906', 'Transistor 2N3906', 'Transistor PNP 40V 200mA TO-92', 'transistor', 'ON Semiconductor', 4500, 1500, 0.0650, 7),
+
+    -- Diodes et LEDs (6 composants)
+    ('DIODE-1N4148', 'Diode 1N4148', 'Diode signal 100V 200mA DO-35', 'diode', 'Vishay', 8000, 2500, 0.0350, 7),
+    ('DIODE-1N4007', 'Diode 1N4007', 'Diode redressement 1000V 1A DO-41', 'diode', 'ON Semiconductor', 6000, 2000, 0.0450, 7),
+    ('LED-RED-0805', 'LED Rouge 0805', 'LED rouge 2V 20mA CMS 0805', 'led', 'Kingbright', 10000, 3000, 0.0450, 7),
+    ('LED-GREEN-0805', 'LED Verte 0805', 'LED verte 2.1V 20mA CMS 0805', 'led', 'Kingbright', 9000, 3000, 0.0450, 7),
+    ('LED-BLUE-0805', 'LED Bleue 0805', 'LED bleue 3.2V 20mA CMS 0805', 'led', 'Kingbright', 8000, 2500, 0.0550, 7),
+    ('DIODE-SCHOTTKY', 'Diode Schottky SS34', 'Diode Schottky 40V 3A DO-214', 'diode', 'Vishay', 3000, 1000, 0.1850, 7),
+
+    -- Connecteurs (5 composants)
+    ('CONN-RJ45', 'Connecteur RJ45', 'Connecteur Ethernet RJ45 avec LED', 'connecteur', 'Amphenol', 2000, 500, 0.8500, 14),
+    ('CONN-USB-B', 'Connecteur USB-B', 'Connecteur USB type B traversant', 'connecteur', 'Molex', 1500, 400, 0.6500, 14),
+    ('CONN-HEADER-40', 'Barrette 40 pins', 'Connecteur header mâle 2x20 2.54mm', 'connecteur', 'Harwin', 3000, 800, 0.4500, 7),
+    ('CONN-TERMINAL-2P', 'Bornier 2 pôles', 'Bornier à vis 2 pôles 5.08mm', 'connecteur', 'Phoenix', 2500, 700, 0.3500, 14),
+    ('CONN-JST-4P', 'Connecteur JST 4 pins', 'Connecteur JST-XH 4 positions', 'connecteur', 'JST', 4000, 1200, 0.2500, 7),
+
+    -- Autres composants (4 composants)
+    ('CRYSTAL-16MHZ', 'Quartz 16MHz', 'Cristal 16MHz HC-49S', 'cristal', 'ECS', 2000, 600, 0.3500, 14),
+    ('CRYSTAL-32KHZ', 'Quartz 32.768kHz', 'Cristal horloger 32.768kHz cylindrique', 'cristal', 'Abracon', 1500, 500, 0.4500, 14),
+    ('RELAY-5V', 'Relais 5V', 'Relais électromécanique 5V 10A SPDT', 'relais', 'Omron', 800, 250, 1.2500, 14),
+    ('INDUCTOR-100U', 'Inductance 100µH', 'Inductance de puissance 100µH 3A', 'inductance', 'Würth', 1200, 400, 0.6500, 14);
+
+-- Insertion de la nomenclature (BOM) - Liaison cartes/composants
+-- Carte 1: PCB-CTRL-001 (Contrôleur Principal) - 28 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (1, 21, 1, 'U1'), -- MCU STM32F4
+    (1, 1, 8, 'R1-R8'), -- Résistances 10kΩ
+    (1, 2, 6, 'R9-R14'), -- Résistances 1kΩ
+    (1, 7, 4, 'R15-R18'), -- Résistances 4.7kΩ
+    (1, 9, 12, 'C1-C12'), -- Condensateurs 100nF
+    (1, 10, 4, 'C13-C16'), -- Condensateurs 10µF
+    (1, 13, 2, 'C17-C18'), -- Condensateurs 1µF
+    (1, 28, 2, 'U2-U3'), -- ADC ADS1115
+    (1, 31, 1, 'U4'), -- RTC DS3231
+    (1, 47, 1, 'Y1'), -- Quartz 16MHz
+    (1, 48, 1, 'Y2'), -- Quartz 32.768kHz
+    (1, 38, 2, 'D1-D2'), -- Diodes 1N4148
+    (1, 40, 1, 'LED1'), -- LED Rouge
+    (1, 41, 1, 'LED2'), -- LED Verte
+    (1, 42, 1, 'LED3'), -- LED Bleue
+    (1, 45, 1, 'J1'), -- Connecteur Header 40
+    (1, 47, 2, 'J2-J3'); -- Connecteur JST 4P
+
+-- Carte 2: PCB-PWR-002 (Alimentation 24V) - 22 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (2, 22, 2, 'U1-U2'), -- Régulateur 7805
+    (2, 23, 1, 'U3'), -- Régulateur LM317
+    (2, 33, 1, 'U4'), -- Convertisseur DC-DC LM2596
+    (2, 6, 2, 'R1-R2'), -- Résistances 0.1Ω puissance
+    (2, 4, 4, 'R3-R6'), -- Résistances 47kΩ
+    (2, 12, 4, 'C1-C4'), -- Condensateurs électrolytiques 470µF
+    (2, 11, 3, 'C5-C7'), -- Condensateurs 22µF
+    (2, 14, 2, 'C8-C9'), -- Condensateurs 47µF
+    (2, 39, 4, 'D1-D4'), -- Diodes 1N4007
+    (2, 43, 2, 'D5-D6'), -- Diodes Schottky
+    (2, 50, 1, 'L1'), -- Inductance 100µH
+    (2, 40, 1, 'LED1'), -- LED Rouge
+    (2, 41, 1, 'LED2'), -- LED Verte
+    (2, 46, 2, 'J1-J2'); -- Bornier 2 pôles
+
+-- Carte 3: PCB-COM-003 (Communication RS485/Ethernet) - 25 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (3, 25, 2, 'U1-U2'), -- Transceiver RS485
+    (3, 26, 1, 'U3'), -- Contrôleur Ethernet W5500
+    (3, 27, 1, 'U4'), -- EEPROM 24C256
+    (3, 32, 1, 'U5'), -- Flash W25Q128
+    (3, 1, 10, 'R1-R10'), -- Résistances 10kΩ
+    (3, 3, 6, 'R11-R16'), -- Résistances 100Ω
+    (3, 9, 15, 'C1-C15'), -- Condensateurs 100nF
+    (3, 10, 3, 'C16-C18'), -- Condensateurs 10µF
+    (3, 38, 4, 'D1-D4'), -- Diodes 1N4148
+    (3, 40, 2, 'LED1-LED2'), -- LED Rouge
+    (3, 41, 2, 'LED3-LED4'), -- LED Verte
+    (3, 44, 1, 'J1'), -- Connecteur RJ45
+    (3, 47, 2, 'J2-J3'); -- Connecteur JST 4P
+
+-- Carte 4: PCB-HMI-004 (Interface Utilisateur) - 18 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (4, 21, 1, 'U1'), -- MCU STM32F4
+    (4, 24, 2, 'U2-U3'), -- Ampli-op LM358
+    (4, 1, 6, 'R1-R6'), -- Résistances 10kΩ
+    (4, 2, 8, 'R7-R14'), -- Résistances 1kΩ
+    (4, 5, 4, 'R15-R18'), -- Résistances 220Ω
+    (4, 9, 10, 'C1-C10'), -- Condensateurs 100nF
+    (4, 10, 4, 'C11-C14'), -- Condensateurs 10µF
+    (4, 47, 1, 'Y1'), -- Quartz 16MHz
+    (4, 40, 3, 'LED1-LED3'), -- LED Rouge
+    (4, 41, 3, 'LED4-LED6'), -- LED Verte
+    (4, 42, 2, 'LED7-LED8'), -- LED Bleue
+    (4, 45, 1, 'J1'), -- Connecteur Header 40
+    (4, 45, 1, 'J2'); -- Connecteur USB-B
+
+-- Carte 5: PCB-SENS-005 (Acquisition Capteurs) - 30 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (5, 28, 4, 'U1-U4'), -- ADC ADS1115
+    (5, 24, 4, 'U5-U8'), -- Ampli-op LM358
+    (5, 1, 16, 'R1-R16'), -- Résistances 10kΩ
+    (5, 2, 8, 'R17-R24'), -- Résistances 1kΩ
+    (5, 7, 6, 'R25-R30'), -- Résistances 4.7kΩ
+    (5, 9, 20, 'C1-C20'), -- Condensateurs 100nF
+    (5, 10, 8, 'C21-C28'), -- Condensateurs 10µF
+    (5, 13, 4, 'C29-C32'), -- Condensateurs 1µF
+    (5, 38, 8, 'D1-D8'), -- Diodes 1N4148
+    (5, 34, 4, 'Q1-Q4'), -- Transistors 2N2222
+    (5, 40, 2, 'LED1-LED2'), -- LED Rouge
+    (5, 41, 2, 'LED3-LED4'), -- LED Verte
+    (5, 46, 4, 'J1-J4'), -- Bornier 2 pôles
+    (5, 47, 4, 'J5-J8'); -- Connecteur JST 4P
+
+-- Carte 6: PCB-CPU-006 (Processeur Industriel) - 24 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (6, 21, 2, 'U1-U2'), -- MCU STM32F4
+    (6, 32, 2, 'U3-U4'), -- Flash W25Q128
+    (6, 27, 1, 'U5'), -- EEPROM 24C256
+    (6, 31, 1, 'U6'), -- RTC DS3231
+    (6, 1, 12, 'R1-R12'), -- Résistances 10kΩ
+    (6, 2, 8, 'R13-R20'), -- Résistances 1kΩ
+    (6, 9, 18, 'C1-C18'), -- Condensateurs 100nF
+    (6, 10, 6, 'C19-C24'), -- Condensateurs 10µF
+    (6, 11, 4, 'C25-C28'), -- Condensateurs 22µF
+    (6, 47, 2, 'Y1-Y2'), -- Quartz 16MHz
+    (6, 48, 1, 'Y3'), -- Quartz 32.768kHz
+    (6, 40, 2, 'LED1-LED2'), -- LED Rouge
+    (6, 41, 2, 'LED3-LED4'), -- LED Verte
+    (6, 42, 2, 'LED5-LED6'), -- LED Bleue
+    (6, 45, 2, 'J1-J2'); -- Connecteur Header 40
+
+-- Carte 7: PCB-MEM-007 (Extension Mémoire) - 15 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (7, 32, 4, 'U1-U4'), -- Flash W25Q128
+    (7, 27, 2, 'U5-U6'), -- EEPROM 24C256
+    (7, 1, 8, 'R1-R8'), -- Résistances 10kΩ
+    (7, 3, 4, 'R9-R12'), -- Résistances 100Ω
+    (7, 9, 12, 'C1-C12'), -- Condensateurs 100nF
+    (7, 10, 4, 'C13-C16'), -- Condensateurs 10µF
+    (7, 40, 2, 'LED1-LED2'), -- LED Rouge
+    (7, 41, 2, 'LED3-LED4'), -- LED Verte
+    (7, 45, 1, 'J1'); -- Connecteur Header 40
+
+-- Carte 8: PCB-DISP-008 (Affichage LED Matrix) - 20 composants
+INSERT INTO nomenclature (carte_id, composant_id, quantite, reference_designator) VALUES
+    (8, 21, 1, 'U1'), -- MCU STM32F4
+    (8, 29, 4, 'U2-U5'), -- Driver moteur L293D (utilisé pour LED)
+    (8, 3, 16, 'R1-R16'), -- Résistances 100Ω
+    (8, 5, 8, 'R17-R24'), -- Résistances 220Ω
+    (8, 9, 10, 'C1-C10'), -- Condensateurs 100nF
+    (8, 10, 4, 'C11-C14'), -- Condensateurs 10µF
+    (8, 47, 1, 'Y1'), -- Quartz 16MHz
+    (8, 40, 8, 'LED1-LED8'), -- LED Rouge
+    (8, 41, 8, 'LED9-LED16'), -- LED Verte
+    (8, 42, 8, 'LED17-LED24'), -- LED Bleue
+    (8, 36, 4, 'Q1-Q4'), -- MOSFET BSS138
+    (8, 45, 1, 'J1'), -- Connecteur Header 40
+    (8, 46, 2, 'J2-J3'); -- Bornier 2 pôles
+
+-- Insertion des opérations de fabrication
+INSERT INTO operations_fabrication (code_operation, nom, description, type_operation, categorie, duree_standard_minutes, cout_horaire) VALUES
+    ('OP-010', 'Sérigraphie pâte à souder', 'Application de pâte à souder par sérigraphie', 'automatique', 'assemblage_cms', 3.5, 45.00),
+    ('OP-020', 'Placement composants CMS', 'Placement automatique des composants CMS', 'automatique', 'assemblage_cms', 8.0, 65.00),
+    ('OP-030', 'Four de refusion', 'Soudure par refusion en four', 'automatique', 'soudure_refusion', 12.0, 35.00),
+    ('OP-040', 'Inspection AOI', 'Inspection optique automatique post-refusion', 'automatique', 'inspection_aoi', 4.0, 55.00),
+    ('OP-050', 'Insertion composants traversants', 'Insertion manuelle des composants traversants', 'manuelle', 'assemblage_traversant', 15.0, 28.00),
+    ('OP-060', 'Soudure vague', 'Soudure à la vague des composants traversants', 'automatique', 'soudure_vague', 6.0, 42.00),
+    ('OP-070', 'Nettoyage carte', 'Nettoyage des résidus de flux', 'automatique', 'nettoyage', 5.0, 30.00),
+    ('OP-080', 'Inspection visuelle', 'Contrôle visuel de la qualité de soudure', 'manuelle', 'inspection_visuelle', 8.0, 32.00),
+    ('OP-090', 'Test électrique', 'Test électrique en circuit (ICT)', 'automatique', 'test_electrique', 6.0, 50.00),
+    ('OP-100', 'Programmation firmware', 'Programmation du microcontrôleur', 'automatique', 'test_electrique', 4.0, 45.00),
+    ('OP-110', 'Test fonctionnel', 'Test fonctionnel complet de la carte', 'automatique', 'test_fonctionnel', 10.0, 55.00),
+    ('OP-120', 'Découpe panneaux', 'Découpe des cartes du panneau', 'automatique', 'decoupe', 3.0, 38.00),
+    ('OP-130', 'Retouche manuelle', 'Retouche et réparation manuelle', 'manuelle', 'manutention', 20.0, 35.00),
+    ('OP-140', 'Conditionnement', 'Emballage et conditionnement final', 'manuelle', 'conditionnement', 5.0, 25.00),
+    ('OP-150', 'Contrôle final', 'Contrôle qualité final avant expédition', 'manuelle', 'inspection_visuelle', 6.0, 30.00);
+
+-- Insertion des gammes de fabrication (séquence d'opérations pour chaque carte)
+-- Gamme pour Carte 1: PCB-CTRL-001 (Contrôleur Principal)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (1, 1, 1, 3.5),   -- Sérigraphie
+    (1, 2, 2, 10.0),  -- Placement CMS
+    (1, 3, 3, 12.0),  -- Refusion
+    (1, 4, 4, 4.5),   -- AOI
+    (1, 5, 5, 12.0),  -- Insertion traversants
+    (1, 6, 6, 6.0),   -- Soudure vague
+    (1, 7, 7, 5.0),   -- Nettoyage
+    (1, 8, 8, 8.0),   -- Inspection visuelle
+    (1, 9, 9, 6.0),   -- Test électrique
+    (1, 10, 10, 4.0), -- Programmation
+    (1, 11, 11, 10.0), -- Test fonctionnel
+    (1, 12, 12, 3.0), -- Découpe
+    (1, 14, 13, 5.0), -- Conditionnement
+    (1, 15, 14, 6.0); -- Contrôle final
+
+-- Gamme pour Carte 2: PCB-PWR-002 (Alimentation)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (2, 1, 1, 3.0),
+    (2, 2, 2, 6.0),
+    (2, 3, 3, 12.0),
+    (2, 4, 4, 4.0),
+    (2, 5, 5, 10.0),
+    (2, 6, 6, 6.0),
+    (2, 7, 7, 5.0),
+    (2, 8, 8, 7.0),
+    (2, 9, 9, 8.0),
+    (2, 11, 10, 12.0),
+    (2, 12, 11, 3.0),
+    (2, 14, 12, 5.0),
+    (2, 15, 13, 6.0);
+
+-- Gamme pour Carte 3: PCB-COM-003 (Communication)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (3, 1, 1, 3.5),
+    (3, 2, 2, 9.0),
+    (3, 3, 3, 12.0),
+    (3, 4, 4, 4.5),
+    (3, 5, 5, 8.0),
+    (3, 6, 6, 6.0),
+    (3, 7, 7, 5.0),
+    (3, 8, 8, 8.0),
+    (3, 9, 9, 7.0),
+    (3, 10, 10, 5.0),
+    (3, 11, 11, 12.0),
+    (3, 12, 12, 3.0),
+    (3, 14, 13, 5.0),
+    (3, 15, 14, 6.0);
+
+-- Gamme pour Carte 4: PCB-HMI-004 (Interface Utilisateur)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (4, 1, 1, 4.0),
+    (4, 2, 2, 8.0),
+    (4, 3, 3, 12.0),
+    (4, 4, 4, 5.0),
+    (4, 5, 5, 15.0),
+    (4, 6, 6, 6.0),
+    (4, 7, 7, 5.0),
+    (4, 8, 8, 10.0),
+    (4, 9, 9, 7.0),
+    (4, 10, 10, 4.0),
+    (4, 11, 11, 15.0),
+    (4, 12, 12, 3.0),
+    (4, 14, 13, 5.0),
+    (4, 15, 14, 7.0);
+
+-- Gamme pour Carte 5: PCB-SENS-005 (Acquisition Capteurs)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (5, 1, 1, 3.5),
+    (5, 2, 2, 7.0),
+    (5, 3, 3, 12.0),
+    (5, 4, 4, 4.0),
+    (5, 5, 5, 12.0),
+    (5, 6, 6, 6.0),
+    (5, 7, 7, 5.0),
+    (5, 8, 8, 8.0),
+    (5, 9, 9, 8.0),
+    (5, 11, 10, 12.0),
+    (5, 12, 11, 3.0),
+    (5, 14, 12, 5.0),
+    (5, 15, 13, 6.0);
+
+-- Gamme pour Carte 6: PCB-CPU-006 (Processeur Industriel)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (6, 1, 1, 4.0),
+    (6, 2, 2, 12.0),
+    (6, 3, 3, 12.0),
+    (6, 4, 4, 5.0),
+    (6, 5, 5, 10.0),
+    (6, 6, 6, 6.0),
+    (6, 7, 7, 5.0),
+    (6, 8, 8, 10.0),
+    (6, 9, 9, 8.0),
+    (6, 10, 10, 6.0),
+    (6, 11, 11, 15.0),
+    (6, 12, 12, 3.0),
+    (6, 14, 13, 5.0),
+    (6, 15, 14, 7.0);
+
+-- Gamme pour Carte 7: PCB-MEM-007 (Extension Mémoire)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (7, 1, 1, 3.0),
+    (7, 2, 2, 5.0),
+    (7, 3, 3, 12.0),
+    (7, 4, 4, 3.5),
+    (7, 7, 5, 5.0),
+    (7, 8, 6, 6.0),
+    (7, 9, 7, 6.0),
+    (7, 10, 8, 5.0),
+    (7, 11, 9, 10.0),
+    (7, 12, 10, 3.0),
+    (7, 14, 11, 5.0),
+    (7, 15, 12, 5.0);
+
+-- Gamme pour Carte 8: PCB-DISP-008 (Affichage LED)
+INSERT INTO gammes_fabrication (carte_id, operation_id, ordre_operation, duree_minutes) VALUES
+    (8, 1, 1, 3.5),
+    (8, 2, 2, 8.0),
+    (8, 3, 3, 12.0),
+    (8, 4, 4, 4.5),
+    (8, 5, 5, 10.0),
+    (8, 6, 6, 6.0),
+    (8, 7, 7, 5.0),
+    (8, 8, 8, 9.0),
+    (8, 9, 9, 7.0),
+    (8, 10, 10, 4.0),
+    (8, 11, 11, 12.0),
+    (8, 12, 12, 3.0),
+    (8, 14, 13, 5.0),
+    (8, 15, 14, 6.0);
+
+-- Insertion des ordres de fabrication (3 mois d'historique: Avril, Mai, Juin 2024)
+INSERT INTO ordres_fabrication (numero_of, carte_id, quantite_prevue, quantite_produite, quantite_conforme, quantite_rebut, date_lancement, date_fin_prevue, date_fin_reelle, statut, priorite, commentaire) VALUES
+    -- Avril 2024
+    ('OF-2024-0401', 1, 500, 500, 495, 5, '2024-04-01', '2024-04-03', '2024-04-03', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0402', 2, 300, 300, 298, 2, '2024-04-01', '2024-04-02', '2024-04-02', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0403', 3, 200, 200, 197, 3, '2024-04-02', '2024-04-04', '2024-04-04', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0404', 4, 150, 150, 148, 2, '2024-04-03', '2024-04-05', '2024-04-05', 'termine', 'haute', 'Commande client prioritaire'),
+    ('OF-2024-0405', 5, 400, 400, 392, 8, '2024-04-04', '2024-04-06', '2024-04-06', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0406', 6, 100, 100, 98, 2, '2024-04-05', '2024-04-08', '2024-04-08', 'termine', 'urgente', 'Commande urgente'),
+    ('OF-2024-0407', 7, 250, 250, 248, 2, '2024-04-08', '2024-04-10', '2024-04-10', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0408', 8, 350, 350, 343, 7, '2024-04-09', '2024-04-11', '2024-04-11', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0409', 1, 600, 600, 591, 9, '2024-04-10', '2024-04-12', '2024-04-12', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0410', 2, 400, 400, 396, 4, '2024-04-11', '2024-04-13', '2024-04-13', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0411', 3, 250, 250, 245, 5, '2024-04-12', '2024-04-15', '2024-04-15', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0412', 4, 200, 200, 198, 2, '2024-04-15', '2024-04-17', '2024-04-17', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0413', 5, 450, 450, 441, 9, '2024-04-16', '2024-04-18', '2024-04-18', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0414', 6, 120, 120, 117, 3, '2024-04-17', '2024-04-20', '2024-04-20', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0415', 7, 300, 300, 295, 5, '2024-04-18', '2024-04-20', '2024-04-20', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0416', 8, 380, 380, 374, 6, '2024-04-19', '2024-04-22', '2024-04-22', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0417', 1, 550, 550, 543, 7, '2024-04-22', '2024-04-24', '2024-04-24', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0418', 2, 350, 350, 347, 3, '2024-04-23', '2024-04-25', '2024-04-25', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0419', 3, 280, 280, 275, 5, '2024-04-24', '2024-04-26', '2024-04-26', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0420', 4, 180, 180, 177, 3, '2024-04-25', '2024-04-27', '2024-04-27', 'termine', 'normale', 'Production standard'),
+
+    -- Mai 2024
+    ('OF-2024-0501', 5, 500, 500, 490, 10, '2024-05-02', '2024-05-04', '2024-05-04', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0502', 6, 150, 150, 147, 3, '2024-05-03', '2024-05-06', '2024-05-06', 'termine', 'urgente', 'Commande urgente'),
+    ('OF-2024-0503', 7, 320, 320, 315, 5, '2024-05-06', '2024-05-08', '2024-05-08', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0504', 8, 400, 400, 392, 8, '2024-05-07', '2024-05-09', '2024-05-09', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0505', 1, 650, 650, 640, 10, '2024-05-08', '2024-05-10', '2024-05-10', 'termine', 'haute', 'Grosse commande'),
+    ('OF-2024-0506', 2, 380, 380, 376, 4, '2024-05-09', '2024-05-11', '2024-05-11', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0507', 3, 300, 300, 294, 6, '2024-05-10', '2024-05-13', '2024-05-13', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0508', 4, 220, 220, 217, 3, '2024-05-13', '2024-05-15', '2024-05-15', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0509', 5, 480, 480, 471, 9, '2024-05-14', '2024-05-16', '2024-05-16', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0510', 6, 130, 130, 128, 2, '2024-05-15', '2024-05-18', '2024-05-18', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0511', 7, 350, 350, 343, 7, '2024-05-16', '2024-05-18', '2024-05-18', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0512', 8, 420, 420, 412, 8, '2024-05-17', '2024-05-20', '2024-05-20', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0513', 1, 580, 580, 572, 8, '2024-05-20', '2024-05-22', '2024-05-22', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0514', 2, 360, 360, 356, 4, '2024-05-21', '2024-05-23', '2024-05-23', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0515', 3, 270, 270, 265, 5, '2024-05-22', '2024-05-24', '2024-05-24', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0516', 4, 190, 190, 188, 2, '2024-05-23', '2024-05-25', '2024-05-25', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0517', 5, 510, 510, 500, 10, '2024-05-24', '2024-05-27', '2024-05-27', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0518', 6, 140, 140, 137, 3, '2024-05-27', '2024-05-30', '2024-05-30', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0519', 7, 330, 330, 325, 5, '2024-05-28', '2024-05-30', '2024-05-30', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0520', 8, 390, 390, 383, 7, '2024-05-29', '2024-05-31', '2024-05-31', 'termine', 'normale', 'Production standard'),
+
+    -- Juin 2024
+    ('OF-2024-0601', 1, 620, 620, 611, 9, '2024-06-03', '2024-06-05', '2024-06-05', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0602', 2, 390, 390, 386, 4, '2024-06-04', '2024-06-06', '2024-06-06', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0603', 3, 310, 310, 304, 6, '2024-06-05', '2024-06-07', '2024-06-07', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0604', 4, 210, 210, 207, 3, '2024-06-06', '2024-06-08', '2024-06-08', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0605', 5, 530, 530, 520, 10, '2024-06-07', '2024-06-10', '2024-06-10', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0606', 6, 160, 160, 157, 3, '2024-06-10', '2024-06-13', '2024-06-13', 'termine', 'urgente', 'Commande urgente'),
+    ('OF-2024-0607', 7, 360, 360, 354, 6, '2024-06-11', '2024-06-13', '2024-06-13', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0608', 8, 440, 440, 432, 8, '2024-06-12', '2024-06-14', '2024-06-14', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0609', 1, 590, 590, 582, 8, '2024-06-13', '2024-06-15', '2024-06-15', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0610', 2, 370, 370, 366, 4, '2024-06-14', '2024-06-17', '2024-06-17', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0611', 3, 290, 290, 285, 5, '2024-06-17', '2024-06-19', '2024-06-19', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0612', 4, 200, 200, 197, 3, '2024-06-18', '2024-06-20', '2024-06-20', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0613', 5, 490, 490, 481, 9, '2024-06-19', '2024-06-21', '2024-06-21', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0614', 6, 145, 145, 142, 3, '2024-06-20', '2024-06-23', '2024-06-23', 'termine', 'haute', 'Production standard'),
+    ('OF-2024-0615', 7, 340, 340, 335, 5, '2024-06-21', '2024-06-24', '2024-06-24', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0616', 8, 410, 410, 403, 7, '2024-06-24', '2024-06-26', '2024-06-26', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0617', 1, 560, 560, 552, 8, '2024-06-25', '2024-06-27', '2024-06-27', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0618', 2, 340, 340, 337, 3, '2024-06-26', '2024-06-28', '2024-06-28', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0619', 3, 260, 260, 256, 4, '2024-06-27', '2024-06-29', '2024-06-29', 'termine', 'normale', 'Production standard'),
+    ('OF-2024-0620', 4, 170, 170, 168, 2, '2024-06-28', '2024-07-01', '2024-07-01', 'termine', 'normale', 'Production standard'),
+
+    -- Ordres en cours et planifiés (fin juin / début juillet)
+    ('OF-2024-0621', 5, 520, 480, 472, 8, '2024-06-29', '2024-07-02', NULL, 'en_cours', 'normale', 'Production en cours'),
+    ('OF-2024-0622', 6, 155, 120, 118, 2, '2024-07-01', '2024-07-04', NULL, 'en_cours', 'haute', 'Production en cours'),
+    ('OF-2024-0623', 7, 370, 0, 0, 0, '2024-07-02', '2024-07-05', NULL, 'planifie', 'normale', 'Production planifiée'),
+    ('OF-2024-0624', 8, 450, 0, 0, 0, '2024-07-03', '2024-07-06', NULL, 'planifie', 'normale', 'Production planifiée'),
+    ('OF-2024-0625', 1, 600, 0, 0, 0, '2024-07-04', '2024-07-07', NULL, 'planifie', 'haute', 'Grosse commande planifiée');
+
+-- Insertion du suivi de production (exemples pour quelques ordres)
+-- Suivi pour OF-2024-0401 (Carte 1 - 500 pièces)
+INSERT INTO suivi_production (ordre_fabrication_id, operation_id, date_debut, date_fin, quantite_traitee, quantite_conforme, quantite_defaut, operateur, machine, statut) VALUES
+    (1, 1, '2024-04-01 08:00:00', '2024-04-01 08:30:00', 500, 500, 0, 'Marie Dubois', 'SERIGRAPHE-01', 'termine'),
+    (1, 2, '2024-04-01 08:45:00', '2024-04-01 10:15:00', 500, 500, 0, 'AUTO', 'PICK-PLACE-01', 'termine'),
+    (1, 3, '2024-04-01 10:30:00', '2024-04-01 12:30:00', 500, 500, 0, 'AUTO', 'FOUR-REFUSION-01', 'termine'),
+    (1, 4, '2024-04-01 13:00:00', '2024-04-01 13:45:00', 500, 498, 2, 'AUTO', 'AOI-01', 'termine'),
+    (1, 5, '2024-04-01 14:00:00', '2024-04-01 16:00:00', 498, 498, 0, 'Jean Martin', NULL, 'termine'),
+    (1, 6, '2024-04-01 16:15:00', '2024-04-01 17:15:00', 498, 497, 1, 'AUTO', 'VAGUE-01', 'termine'),
+    (1, 7, '2024-04-02 08:00:00', '2024-04-02 08:50:00', 497, 497, 0, 'AUTO', 'NETTOYAGE-01', 'termine'),
+    (1, 8, '2024-04-02 09:00:00', '2024-04-02 10:20:00', 497, 496, 1, 'Sophie Laurent', NULL, 'termine'),
+    (1, 9, '2024-04-02 10:30:00', '2024-04-02 11:30:00', 496, 496, 0, 'AUTO', 'ICT-01', 'termine'),
+    (1, 10, '2024-04-02 11:45:00', '2024-04-02 12:30:00', 496, 496, 0, 'AUTO', 'PROG-01', 'termine'),
+    (1, 11, '2024-04-02 13:30:00', '2024-04-02 15:10:00', 496, 495, 1, 'AUTO', 'TEST-FUNC-01', 'termine'),
+    (1, 12, '2024-04-02 15:30:00', '2024-04-02 16:00:00', 495, 495, 0, 'AUTO', 'DECOUPE-01', 'termine'),
+    (1, 14, '2024-04-03 08:00:00', '2024-04-03 09:30:00', 495, 495, 0, 'Luc Petit', NULL, 'termine'),
+    (1, 15, '2024-04-03 09:45:00', '2024-04-03 11:00:00', 495, 495, 0, 'Claire Moreau', NULL, 'termine');
+
+-- Suivi pour OF-2024-0505 (Carte 1 - 650 pièces - grosse commande)
+INSERT INTO suivi_production (ordre_fabrication_id, operation_id, date_debut, date_fin, quantite_traitee, quantite_conforme, quantite_defaut, operateur, machine, statut) VALUES
+    (25, 1, '2024-05-08 08:00:00', '2024-05-08 08:40:00', 650, 650, 0, 'Marie Dubois', 'SERIGRAPHE-01', 'termine'),
+    (25, 2, '2024-05-08 09:00:00', '2024-05-08 11:00:00', 650, 650, 0, 'AUTO', 'PICK-PLACE-01', 'termine'),
+    (25, 3, '2024-05-08 11:15:00', '2024-05-08 13:30:00', 650, 650, 0, 'AUTO', 'FOUR-REFUSION-01', 'termine'),
+    (25, 4, '2024-05-08 14:00:00', '2024-05-08 15:00:00', 650, 646, 4, 'AUTO', 'AOI-01', 'termine'),
+    (25, 5, '2024-05-08 15:15:00', '2024-05-08 17:30:00', 646, 646, 0, 'Jean Martin', NULL, 'termine'),
+    (25, 6, '2024-05-09 08:00:00', '2024-05-09 09:15:00', 646, 644, 2, 'AUTO', 'VAGUE-01', 'termine'),
+    (25, 7, '2024-05-09 09:30:00', '2024-05-09 10:30:00', 644, 644, 0, 'AUTO', 'NETTOYAGE-01', 'termine'),
+    (25, 8, '2024-05-09 10:45:00', '2024-05-09 12:15:00', 644, 642, 2, 'Sophie Laurent', NULL, 'termine'),
+    (25, 9, '2024-05-09 13:00:00', '2024-05-09 14:15:00', 642, 642, 0, 'AUTO', 'ICT-01', 'termine'),
+    (25, 10, '2024-05-09 14:30:00', '2024-05-09 15:20:00', 642, 642, 0, 'AUTO', 'PROG-01', 'termine'),
+    (25, 11, '2024-05-09 15:45:00', '2024-05-09 17:30:00', 642, 640, 2, 'AUTO', 'TEST-FUNC-01', 'termine'),
+    (25, 12, '2024-05-10 08:00:00', '2024-05-10 08:35:00', 640, 640, 0, 'AUTO', 'DECOUPE-01', 'termine'),
+    (25, 14, '2024-05-10 09:00:00', '2024-05-10 10:45:00', 640, 640, 0, 'Luc Petit', NULL, 'termine'),
+    (25, 15, '2024-05-10 11:00:00', '2024-05-10 12:30:00', 640, 640, 0, 'Claire Moreau', NULL, 'termine');
+
+-- Suivi pour OF-2024-0606 (Carte 6 - 160 pièces - commande urgente)
+INSERT INTO suivi_production (ordre_fabrication_id, operation_id, date_debut, date_fin, quantite_traitee, quantite_conforme, quantite_defaut, operateur, machine, statut) VALUES
+    (46, 1, '2024-06-10 08:00:00', '2024-06-10 08:45:00', 160, 160, 0, 'Marie Dubois', 'SERIGRAPHE-02', 'termine'),
+    (46, 2, '2024-06-10 09:00:00', '2024-06-10 11:30:00', 160, 160, 0, 'AUTO', 'PICK-PLACE-02', 'termine'),
+    (46, 3, '2024-06-10 11:45:00', '2024-06-10 13:45:00', 160, 160, 0, 'AUTO', 'FOUR-REFUSION-02', 'termine'),
+    (46, 4, '2024-06-10 14:00:00', '2024-06-10 14:50:00', 160, 159, 1, 'AUTO', 'AOI-02', 'termine'),
+    (46, 5, '2024-06-10 15:00:00', '2024-06-10 16:40:00', 159, 159, 0, 'Thomas Roux', NULL, 'termine'),
+    (46, 6, '2024-06-11 08:00:00', '2024-06-11 09:00:00', 159, 159, 0, 'AUTO', 'VAGUE-02', 'termine'),
+    (46, 7, '2024-06-11 09:15:00', '2024-06-11 10:05:00', 159, 159, 0, 'AUTO', 'NETTOYAGE-02', 'termine'),
+    (46, 8, '2024-06-11 10:15:00', '2024-06-11 12:00:00', 159, 158, 1, 'Sophie Laurent', NULL, 'termine'),
+    (46, 9, '2024-06-11 13:00:00', '2024-06-11 14:20:00', 158, 158, 0, 'AUTO', 'ICT-02', 'termine'),
+    (46, 10, '2024-06-11 14:30:00', '2024-06-11 15:30:00', 158, 158, 0, 'AUTO', 'PROG-02', 'termine'),
+    (46, 11, '2024-06-12 08:00:00', '2024-06-12 10:30:00', 158, 157, 1, 'AUTO', 'TEST-FUNC-02', 'termine'),
+    (46, 12, '2024-06-12 10:45:00', '2024-06-12 11:15:00', 157, 157, 0, 'AUTO', 'DECOUPE-02', 'termine'),
+    (46, 14, '2024-06-12 13:00:00', '2024-06-12 14:20:00', 157, 157, 0, 'Luc Petit', NULL, 'termine'),
+    (46, 15, '2024-06-13 08:00:00', '2024-06-13 09:30:00', 157, 157, 0, 'Claire Moreau', NULL, 'termine');
+
+-- Suivi pour OF-2024-0621 (Carte 5 - 520 pièces - en cours)
+INSERT INTO suivi_production (ordre_fabrication_id, operation_id, date_debut, date_fin, quantite_traitee, quantite_conforme, quantite_defaut, operateur, machine, statut) VALUES
+    (61, 1, '2024-06-29 08:00:00', '2024-06-29 08:40:00', 520, 520, 0, 'Marie Dubois', 'SERIGRAPHE-01', 'termine'),
+    (61, 2, '2024-06-29 09:00:00', '2024-06-29 10:50:00', 520, 520, 0, 'AUTO', 'PICK-PLACE-01', 'termine'),
+    (61, 3, '2024-06-29 11:00:00', '2024-06-29 13:00:00', 520, 520, 0, 'AUTO', 'FOUR-REFUSION-01', 'termine'),
+    (61, 4, '2024-06-29 13:30:00', '2024-06-29 14:20:00', 520, 518, 2, 'AUTO', 'AOI-01', 'termine'),
+    (61, 5, '2024-06-29 14:30:00', '2024-06-29 16:45:00', 518, 518, 0, 'Jean Martin', NULL, 'termine'),
+    (61, 6, '2024-07-01 08:00:00', '2024-07-01 09:10:00', 518, 516, 2, 'AUTO', 'VAGUE-01', 'termine'),
+    (61, 7, '2024-07-01 09:30:00', '2024-07-01 10:25:00', 516, 516, 0, 'AUTO', 'NETTOYAGE-01', 'termine'),
+    (61, 8, '2024-07-01 10:45:00', '2024-07-01 12:30:00', 516, 514, 2, 'Sophie Laurent', NULL, 'termine'),
+    (61, 9, '2024-07-01 13:30:00', '2024-07-01 14:50:00', 514, 514, 0, 'AUTO', 'ICT-01', 'termine'),
+    (61, 11, '2024-07-01 15:00:00', '2024-07-01 17:15:00', 514, 512, 2, 'AUTO', 'TEST-FUNC-01', 'termine'),
+    (61, 12, '2024-07-02 08:00:00', '2024-07-02 08:30:00', 512, 512, 0, 'AUTO', 'DECOUPE-01', 'termine'),
+    (61, 14, '2024-07-02 09:00:00', '2024-07-02 10:30:00', 512, 512, 0, 'Luc Petit', NULL, 'termine'),
+    (61, 15, '2024-07-02 10:45:00', NULL, 480, 472, 8, 'Claire Moreau', NULL, 'en_cours');
+
+-- Suivi pour OF-2024-0622 (Carte 6 - 155 pièces - en cours)
+INSERT INTO suivi_production (ordre_fabrication_id, operation_id, date_debut, date_fin, quantite_traitee, quantite_conforme, quantite_defaut, operateur, machine, statut) VALUES
+    (62, 1, '2024-07-01 08:00:00', '2024-07-01 08:45:00', 155, 155, 0, 'Marie Dubois', 'SERIGRAPHE-02', 'termine'),
+    (62, 2, '2024-07-01 09:00:00', '2024-07-01 11:30:00', 155, 155, 0, 'AUTO', 'PICK-PLACE-02', 'termine'),
+    (62, 3, '2024-07-01 11:45:00', '2024-07-01 13:45:00', 155, 155, 0, 'AUTO', 'FOUR-REFUSION-02', 'termine'),
+    (62, 4, '2024-07-01 14:00:00', '2024-07-01 14:50:00', 155, 154, 1, 'AUTO', 'AOI-02', 'termine'),
+    (62, 5, '2024-07-01 15:00:00', '2024-07-01 16:40:00', 154, 154, 0, 'Thomas Roux', NULL, 'termine'),
+    (62, 6, '2024-07-02 08:00:00', '2024-07-02 09:00:00', 154, 154, 0, 'AUTO', 'VAGUE-02', 'termine'),
+    (62, 7, '2024-07-02 09:15:00', '2024-07-02 10:05:00', 154, 154, 0, 'AUTO', 'NETTOYAGE-02', 'termine'),
+    (62, 8, '2024-07-02 10:15:00', '2024-07-02 12:00:00', 154, 153, 1, 'Sophie Laurent', NULL, 'termine'),
+    (62, 9, '2024-07-02 13:00:00', '2024-07-02 14:20:00', 153, 153, 0, 'AUTO', 'ICT-02', 'termine'),
+    (62, 10, '2024-07-02 14:30:00', '2024-07-02 15:30:00', 153, 153, 0, 'AUTO', 'PROG-02', 'termine'),
+    (62, 11, '2024-07-03 08:00:00', NULL, 120, 118, 2, 'AUTO', 'TEST-FUNC-02', 'en_cours');
+
+-- Insertion des défauts qualité détectés
+INSERT INTO defauts_qualite (suivi_production_id, type_defaut, description, quantite, gravite, action_corrective, date_detection) VALUES
+    -- Défauts OF-2024-0401
+    (4, 'Soudure insuffisante', 'Manque de pâte à souder sur composants U2', 2, 'majeure', 'Ajustement paramètres sérigraphie', '2024-04-01 13:30:00'),
+    (6, 'Court-circuit', 'Pont de soudure entre pins', 1, 'critique', 'Retouche manuelle effectuée', '2024-04-01 16:45:00'),
+    (8, 'Composant mal orienté', 'LED montée à l''envers', 1, 'moyenne', 'Remplacement composant', '2024-04-02 09:45:00'),
+    (11, 'Test fonctionnel échoué', 'Communication I2C défaillante', 1, 'majeure', 'Remplacement circuit U4', '2024-04-02 14:30:00'),
+
+    -- Défauts OF-2024-0505
+    (18, 'Soudure froide', 'Soudures froides détectées sur connecteurs', 4, 'majeure', 'Augmentation température four', '2024-05-08 14:45:00'),
+    (22, 'Pont de soudure', 'Ponts détectés sur composants CMS', 2, 'critique', 'Retouche manuelle', '2024-05-09 11:30:00'),
+    (24, 'Composant manquant', 'Condensateur C12 absent', 2, 'critique', 'Ajout composant et re-test', '2024-05-09 12:00:00'),
+    (27, 'Test fonctionnel échoué', 'Sortie analogique hors tolérance', 2, 'majeure', 'Calibration et re-test', '2024-05-09 16:45:00'),
+
+    -- Défauts OF-2024-0606
+    (32, 'Défaut AOI', 'Composant légèrement décalé', 1, 'mineure', 'Accepté après inspection visuelle', '2024-06-10 14:30:00'),
+    (36, 'Soudure insuffisante', 'Manque de soudure sur J2', 1, 'majeure', 'Retouche manuelle', '2024-06-11 11:30:00'),
+    (39, 'Test fonctionnel échoué', 'Problème mémoire Flash', 1, 'critique', 'Remplacement U3', '2024-06-12 09:15:00'),
+
+    -- Défauts OF-2024-0621
+    (44, 'Soudure froide', 'Soudures froides sur bornier', 2, 'majeure', 'Retouche manuelle', '2024-06-29 14:00:00'),
+    (46, 'Pont de soudure', 'Court-circuit détecté', 2, 'critique', 'Nettoyage et retouche', '2024-07-01 09:00:00'),
+    (48, 'Composant endommagé', 'Condensateur fissuré', 2, 'majeure', 'Remplacement composant', '2024-07-01 12:00:00'),
+    (50, 'Test fonctionnel échoué', 'Lecture ADC incorrecte', 2, 'majeure', 'Remplacement U2', '2024-07-01 16:30:00'),
+    (53, 'Défaut cosmétique', 'Traces de flux visibles', 8, 'mineure', 'Nettoyage supplémentaire', '2024-07-02 11:00:00'),
+
+    -- Défauts OF-2024-0622
+    (58, 'Défaut AOI', 'Composant mal positionné', 1, 'moyenne', 'Retouche manuelle', '2024-07-01 14:40:00'),
+    (62, 'Soudure insuffisante', 'Manque de soudure sur pins MCU', 1, 'critique', 'Retouche et re-test', '2024-07-02 11:45:00'),
+    (67, 'Test fonctionnel échoué', 'Problème horloge RTC', 2, 'majeure', 'Remplacement U6 et re-test', '2024-07-03 09:30:00');
+
+-- ============================================================================
+-- MESSAGES DE CONFIRMATION ET STATISTIQUES
+-- ============================================================================
+
+SELECT 'Base de données Production Électronique initialisée avec succès !' as message;
+SELECT 'Statistiques de la base de données :' as info;
+SELECT COUNT(*) as nombre_cartes FROM cartes_electroniques;
+SELECT COUNT(*) as nombre_composants FROM composants;
+SELECT COUNT(*) as nombre_lignes_nomenclature FROM nomenclature;
+SELECT COUNT(*) as nombre_operations FROM operations_fabrication;
+SELECT COUNT(*) as nombre_gammes FROM gammes_fabrication;
+SELECT COUNT(*) as nombre_ordres_fabrication FROM ordres_fabrication;
+SELECT COUNT(*) as nombre_suivis_production FROM suivi_production;
+SELECT COUNT(*) as nombre_defauts_qualite FROM defauts_qualite;
+
+-- Statistiques par carte
+SELECT
+    ce.reference,
+    ce.nom,
+    COUNT(DISTINCT n.composant_id) as nb_composants_differents,
+    SUM(n.quantite) as nb_composants_total
+FROM cartes_electroniques ce
+LEFT JOIN nomenclature n ON ce.id = n.carte_id
+GROUP BY ce.id, ce.reference, ce.nom
+ORDER BY ce.reference;
+
+-- Statistiques de production par carte (3 derniers mois)
+SELECT
+    ce.reference,
+    ce.nom,
+    COUNT(of.id) as nb_ordres,
+    SUM(of.quantite_prevue) as quantite_prevue_totale,
+    SUM(of.quantite_produite) as quantite_produite_totale,
+    SUM(of.quantite_conforme) as quantite_conforme_totale,
+    SUM(of.quantite_rebut) as quantite_rebut_totale,
+    ROUND(100.0 * SUM(of.quantite_conforme) / NULLIF(SUM(of.quantite_produite), 0), 2) as taux_conformite_pct
+FROM cartes_electroniques ce
+LEFT JOIN ordres_fabrication of ON ce.id = of.carte_id
+WHERE of.date_lancement >= '2024-04-01'
+GROUP BY ce.id, ce.reference, ce.nom
+ORDER BY ce.reference;
